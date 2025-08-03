@@ -65,6 +65,19 @@ const App = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+  const [showExportSettings, setShowExportSettings] = useState(false);
+  const [exportSettings, setExportSettings] = useState({
+    marginTop: 20,
+    marginBottom: 20,
+    marginLeft: 15,
+    marginRight: 15,
+    pageSize: 'a4',
+    orientation: 'portrait',
+    fontSize: 12,
+    lineHeight: 1.5,
+    includePhoto: true,
+    colorMode: 'color'
+  });
   const resumePreviewRef = useRef(null);
   const autoSaveTimer = useRef(null);
 
