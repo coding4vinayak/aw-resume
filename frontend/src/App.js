@@ -1138,14 +1138,16 @@ const App = () => {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.map((template) => (
+                    {templates && templates.length > 0 ? templates.map((template) => (
                       <SelectItem key={template.id} value={template.id}>
                         <div className="flex items-center gap-2">
                           <Zap className="w-4 h-4" />
                           {template.name}
                         </div>
                       </SelectItem>
-                    ))}
+                    )) : (
+                      <SelectItem value="template1">Loading templates...</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 <div className="mt-3">
