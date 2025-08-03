@@ -1571,6 +1571,15 @@ const App = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
+                  className="w-full justify-start hover:bg-purple-50"
+                  onClick={() => setShowExportSettings(true)}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Export Settings
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
                   className="w-full justify-start hover:bg-red-50"
                   onClick={exportToPDF}
                   disabled={isExporting}
