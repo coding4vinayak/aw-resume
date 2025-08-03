@@ -221,7 +221,7 @@ const App = () => {
     }
   };
 
-  // Enhanced PDF Export with progress tracking
+  // Enhanced PDF Export with customizable settings
   const exportToPDF = async () => {
     try {
       setIsExporting(true);
@@ -234,37 +234,53 @@ const App = () => {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff'
+        backgroundColor: exportSettings.colorMode === 'bw' ? '#ffffff' : '#ffffff'
       });
       
       setExportProgress(50);
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
+      
+      // Page size settings
+      const pageSize = exportSettings.pageSize === 'letter' ? 'letter' : 'a4';
+      const orientation = exportSettings.orientation === 'landscape' ? 'l' : 'p';
+      const pdf = new jsPDF(orientation, 'mm', pageSize);
+      
+      // Calculate dimensions based on page size and margins
+      const pageWidth = pageSize === 'letter' ? 
+        (orientation === 'l' ? 279 : 216) : 
+        (orientation === 'l' ? 297 : 210);
+      const pageHeight = pageSize === 'letter' ? 
+        (orientation === 'l' ? 216 : 279) : 
+        (orientation === 'l' ? 210 : 297);
+      
+      const contentWidth = pageWidth - exportSettings.marginLeft - exportSettings.marginRight;
+      const contentHeight = pageHeight - exportSettings.marginTop - exportSettings.marginBottom;
+      
+      const imgWidth = contentWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       let heightLeft = imgHeight;
-      let position = 0;
+      let position = exportSettings.marginTop;
 
       setExportProgress(75);
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      // Add image with proper margins
+      pdf.addImage(imgData, 'PNG', exportSettings.marginLeft, position, imgWidth, Math.min(imgHeight, contentHeight));
+      heightLeft -= contentHeight;
 
       while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
+        position = exportSettings.marginTop - heightLeft;
         pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+        pdf.addImage(imgData, 'PNG', exportSettings.marginLeft, position, imgWidth, Math.min(heightLeft, contentHeight));
+        heightLeft -= contentHeight;
       }
 
       setExportProgress(100);
       
-      const fileName = `${currentResume.personal_info.full_name || 'Resume'}.pdf`;
+      const fileName = `${currentResume.personal_info.full_name || 'Resume'}_${exportSettings.pageSize}_${exportSettings.orientation}.pdf`;
       pdf.save(fileName);
       
-      showNotification('PDF exported successfully!', 'success');
+      showNotification('PDF exported successfully with custom settings!', 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
       showNotification('Error generating PDF. Please try again.', 'error');
