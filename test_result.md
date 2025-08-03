@@ -208,6 +208,18 @@ frontend:
         agent: "main"
         comment: "Frontend should work unchanged as API interfaces remain the same"
 
+  - task: "Add export settings and customizable margins"
+    implemented: true
+    working: true
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added comprehensive export settings modal with margin controls, page size options, typography settings, and additional formatting options for both PDF and DOC exports"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
