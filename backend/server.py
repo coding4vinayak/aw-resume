@@ -1,7 +1,9 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select, update, delete
 import os
 import logging
 from pathlib import Path
@@ -12,15 +14,10 @@ from datetime import datetime
 import hashlib
 import jwt
 from passlib.context import CryptContext
-
+from database import get_db, create_tables, User as UserModel, Resume as ResumeModel
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
-
-# MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
 app = FastAPI()
@@ -35,8 +32,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = "resume_creator_secret_key_2025"
 ALGORITHM = "HS256"
 
-
-# Define Models
+# Define Pydantic Models (for request/response)
 class PersonalInfo(BaseModel):
     full_name: str = ""
     email: str = ""
@@ -45,6 +41,9 @@ class PersonalInfo(BaseModel):
     linkedin: str = ""
     website: str = ""
     summary: str = ""
+    github: str = ""
+    twitter: str = ""
+    photo_url: str = ""
 
 class Experience(BaseModel):
     title: str = ""
@@ -67,6 +66,20 @@ class Project(BaseModel):
     description: str = ""
     technologies: str = ""
     link: str = ""
+    featured: bool = False
+
+class Achievement(BaseModel):
+    title: str = ""
+    description: str = ""
+    date: str = ""
+    organization: str = ""
+
+class Reference(BaseModel):
+    name: str = ""
+    position: str = ""
+    company: str = ""
+    email: str = ""
+    phone: str = ""
 
 class ResumeData(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -78,6 +91,9 @@ class ResumeData(BaseModel):
     education: List[Education] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
     projects: List[Project] = Field(default_factory=list)
+    achievements: List[Achievement] = Field(default_factory=list)
+    references: List[Reference] = Field(default_factory=list)
+    social_links: List[str] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -89,6 +105,9 @@ class ResumeCreate(BaseModel):
     education: List[Education] = Field(default_factory=list)
     skills: List[str] = Field(default_factory=list)
     projects: List[Project] = Field(default_factory=list)
+    achievements: List[Achievement] = Field(default_factory=list)
+    references: List[Reference] = Field(default_factory=list)
+    social_links: List[str] = Field(default_factory=list)
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -112,7 +131,6 @@ class ResumeTemplate(BaseModel):
     description: str
     preview_image: str
 
-
 # Helper functions
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
@@ -125,28 +143,50 @@ def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+# Convert SQLAlchemy model to Pydantic model
+def resume_to_dict(resume: ResumeModel) -> dict:
+    return {
+        "id": resume.id,
+        "user_id": resume.user_id,
+        "title": resume.title,
+        "template_id": resume.template_id,
+        "personal_info": resume.personal_info or {},
+        "experience": resume.experience or [],
+        "education": resume.education or [],
+        "skills": resume.skills or [],
+        "projects": resume.projects or [],
+        "achievements": resume.achievements or [],
+        "references": resume.references or [],
+        "social_links": resume.social_links or [],
+        "created_at": resume.created_at,
+        "updated_at": resume.updated_at
+    }
 
 # Add your routes to the router instead of directly to app
 @api_router.get("/")
 async def root():
-    return {"message": "Resume Creator API"}
+    return {"message": "Resume Creator API with PostgreSQL"}
 
 # User routes
 @api_router.post("/register")
-async def register_user(user_data: UserCreate):
+async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     # Check if user already exists
-    existing_user = await db.users.find_one({"email": user_data.email})
+    result = await db.execute(select(UserModel).where(UserModel.email == user_data.email))
+    existing_user = result.scalar_one_or_none()
+    
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     # Create new user
-    user = User(
+    user = UserModel(
         email=user_data.email,
         full_name=user_data.full_name,
         password_hash=get_password_hash(user_data.password)
     )
     
-    await db.users.insert_one(user.dict())
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
     
     # Create access token
     access_token = create_access_token(data={"sub": user.email, "user_id": user.id})
@@ -162,22 +202,24 @@ async def register_user(user_data: UserCreate):
     }
 
 @api_router.post("/login")
-async def login_user(user_data: UserLogin):
+async def login_user(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     # Find user
-    user = await db.users.find_one({"email": user_data.email})
-    if not user or not verify_password(user_data.password, user["password_hash"]):
+    result = await db.execute(select(UserModel).where(UserModel.email == user_data.email))
+    user = result.scalar_one_or_none()
+    
+    if not user or not verify_password(user_data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     # Create access token
-    access_token = create_access_token(data={"sub": user["email"], "user_id": user["id"]})
+    access_token = create_access_token(data={"sub": user.email, "user_id": user.id})
     
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user": {
-            "id": user["id"],
-            "email": user["email"],
-            "full_name": user["full_name"]
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name
         }
     }
 
@@ -249,45 +291,112 @@ async def get_resume_templates():
     return templates
 
 @api_router.post("/resumes", response_model=ResumeData, status_code=201)
-async def create_resume(resume_data: ResumeCreate):
-    resume = ResumeData(**resume_data.dict())
-    await db.resumes.insert_one(resume.dict())
-    return resume
+async def create_resume(resume_data: ResumeCreate, db: AsyncSession = Depends(get_db)):
+    try:
+        # Create new resume
+        resume = ResumeModel(
+            title=resume_data.title,
+            template_id=resume_data.template_id,
+            personal_info=resume_data.personal_info.dict(),
+            experience=[exp.dict() for exp in resume_data.experience],
+            education=[edu.dict() for edu in resume_data.education],
+            skills=resume_data.skills,
+            projects=[proj.dict() for proj in resume_data.projects],
+            achievements=[ach.dict() for ach in resume_data.achievements],
+            references=[ref.dict() for ref in resume_data.references],
+            social_links=resume_data.social_links
+        )
+        
+        db.add(resume)
+        await db.commit()
+        await db.refresh(resume)
+        
+        return ResumeData(**resume_to_dict(resume))
+    except Exception as e:
+        await db.rollback()
+        logging.error(f"Error creating resume: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to create resume")
 
 @api_router.get("/resumes", response_model=List[ResumeData])
-async def get_resumes():
-    resumes = await db.resumes.find().to_list(1000)
-    return [ResumeData(**resume) for resume in resumes]
+async def get_resumes(db: AsyncSession = Depends(get_db)):
+    try:
+        result = await db.execute(select(ResumeModel))
+        resumes = result.scalars().all()
+        return [ResumeData(**resume_to_dict(resume)) for resume in resumes]
+    except Exception as e:
+        logging.error(f"Error fetching resumes: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch resumes")
 
 @api_router.get("/resumes/{resume_id}", response_model=ResumeData)
-async def get_resume(resume_id: str):
-    resume = await db.resumes.find_one({"id": resume_id})
-    if not resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    return ResumeData(**resume)
+async def get_resume(resume_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        result = await db.execute(select(ResumeModel).where(ResumeModel.id == resume_id))
+        resume = result.scalar_one_or_none()
+        
+        if not resume:
+            raise HTTPException(status_code=404, detail="Resume not found")
+            
+        return ResumeData(**resume_to_dict(resume))
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error fetching resume: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch resume")
 
 @api_router.put("/resumes/{resume_id}", response_model=ResumeData)
-async def update_resume(resume_id: str, resume_data: ResumeCreate):
-    existing_resume = await db.resumes.find_one({"id": resume_id})
-    if not existing_resume:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    
-    updated_data = resume_data.dict()
-    updated_data["id"] = resume_id
-    updated_data["created_at"] = existing_resume["created_at"]
-    updated_data["updated_at"] = datetime.utcnow()
-    
-    resume = ResumeData(**updated_data)
-    await db.resumes.replace_one({"id": resume_id}, resume.dict())
-    return resume
+async def update_resume(resume_id: str, resume_data: ResumeCreate, db: AsyncSession = Depends(get_db)):
+    try:
+        # Find existing resume
+        result = await db.execute(select(ResumeModel).where(ResumeModel.id == resume_id))
+        existing_resume = result.scalar_one_or_none()
+        
+        if not existing_resume:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        
+        # Update resume fields
+        existing_resume.title = resume_data.title
+        existing_resume.template_id = resume_data.template_id
+        existing_resume.personal_info = resume_data.personal_info.dict()
+        existing_resume.experience = [exp.dict() for exp in resume_data.experience]
+        existing_resume.education = [edu.dict() for edu in resume_data.education]
+        existing_resume.skills = resume_data.skills
+        existing_resume.projects = [proj.dict() for proj in resume_data.projects]
+        existing_resume.achievements = [ach.dict() for ach in resume_data.achievements]
+        existing_resume.references = [ref.dict() for ref in resume_data.references]
+        existing_resume.social_links = resume_data.social_links
+        existing_resume.updated_at = datetime.utcnow()
+        
+        await db.commit()
+        await db.refresh(existing_resume)
+        
+        return ResumeData(**resume_to_dict(existing_resume))
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logging.error(f"Error updating resume: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to update resume")
 
 @api_router.delete("/resumes/{resume_id}")
-async def delete_resume(resume_id: str):
-    result = await db.resumes.delete_one({"id": resume_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Resume not found")
-    return {"message": "Resume deleted successfully"}
-
+async def delete_resume(resume_id: str, db: AsyncSession = Depends(get_db)):
+    try:
+        # Find and delete resume
+        result = await db.execute(select(ResumeModel).where(ResumeModel.id == resume_id))
+        resume = result.scalar_one_or_none()
+        
+        if not resume:
+            raise HTTPException(status_code=404, detail="Resume not found")
+        
+        await db.delete(resume)
+        await db.commit()
+        
+        return {"message": "Resume deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        await db.rollback()
+        logging.error(f"Error deleting resume: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to delete resume")
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -307,6 +416,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+@app.on_event("startup")
+async def startup_event():
+    await create_tables()
+    logger.info("PostgreSQL database tables created successfully")
+
 @app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
+async def shutdown_event():
+    logger.info("Application shutdown")
