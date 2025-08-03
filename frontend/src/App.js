@@ -2328,6 +2328,7 @@ const App = () => {
           </div>
         </div>
       </div>
+      <ExportSettings />
     </div>
   );
 };
