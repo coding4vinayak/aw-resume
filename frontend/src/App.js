@@ -290,7 +290,7 @@ const App = () => {
     }
   };
 
-  // New DOC Export functionality
+  // Enhanced DOC Export with customizable settings
   const exportToDoc = async () => {
     try {
       setIsExporting(true);
@@ -300,7 +300,7 @@ const App = () => {
       
       setExportProgress(25);
 
-      // Create document structure
+      // Create document structure with custom settings
       const children = [];
 
       // Header
@@ -310,11 +310,14 @@ const App = () => {
             new TextRun({
               text: personal_info.full_name || 'Your Name',
               bold: true,
-              size: 32,
+              size: Math.round(exportSettings.fontSize * 2.67), // Convert to half points
             }),
           ],
           heading: HeadingLevel.HEADING_1,
           alignment: AlignmentType.CENTER,
+          spacing: {
+            after: Math.round(exportSettings.lineHeight * 200)
+          }
         })
       );
 
@@ -327,9 +330,13 @@ const App = () => {
                 text: [personal_info.email, personal_info.phone, personal_info.location]
                   .filter(Boolean)
                   .join(' | '),
+                size: Math.round(exportSettings.fontSize * 2),
               }),
             ],
             alignment: AlignmentType.CENTER,
+            spacing: {
+              after: Math.round(exportSettings.lineHeight * 150)
+            }
           })
         );
       }
@@ -344,17 +351,26 @@ const App = () => {
               new TextRun({
                 text: 'Professional Summary',
                 bold: true,
-                size: 24,
+                size: Math.round(exportSettings.fontSize * 2.2),
               }),
             ],
             heading: HeadingLevel.HEADING_2,
+            spacing: {
+              before: Math.round(exportSettings.lineHeight * 200),
+              after: Math.round(exportSettings.lineHeight * 100)
+            }
           }),
           new Paragraph({
             children: [
               new TextRun({
                 text: personal_info.summary.replace(/<[^>]*>/g, ''), // Strip HTML
+                size: Math.round(exportSettings.fontSize * 2),
               }),
             ],
+            spacing: {
+              after: Math.round(exportSettings.lineHeight * 150),
+              line: Math.round(exportSettings.lineHeight * 240)
+            }
           }),
           new Paragraph({ children: [] }) // Empty paragraph for spacing
         );
@@ -370,10 +386,14 @@ const App = () => {
               new TextRun({
                 text: 'Experience',
                 bold: true,
-                size: 24,
+                size: Math.round(exportSettings.fontSize * 2.2),
               }),
             ],
             heading: HeadingLevel.HEADING_2,
+            spacing: {
+              before: Math.round(exportSettings.lineHeight * 200),
+              after: Math.round(exportSettings.lineHeight * 100)
+            }
           })
         );
 
@@ -384,19 +404,28 @@ const App = () => {
                 new TextRun({
                   text: exp.title,
                   bold: true,
+                  size: Math.round(exportSettings.fontSize * 2),
                 }),
                 new TextRun({
                   text: ` at ${exp.company}`,
+                  size: Math.round(exportSettings.fontSize * 2),
                 }),
               ],
+              spacing: {
+                after: Math.round(exportSettings.lineHeight * 50)
+              }
             }),
             new Paragraph({
               children: [
                 new TextRun({
                   text: `${exp.start_date} - ${exp.current ? 'Present' : exp.end_date}`,
                   italics: true,
+                  size: Math.round(exportSettings.fontSize * 1.8),
                 }),
               ],
+              spacing: {
+                after: Math.round(exportSettings.lineHeight * 75)
+              }
             })
           );
 
@@ -406,13 +435,23 @@ const App = () => {
                 children: [
                   new TextRun({
                     text: exp.description.replace(/<[^>]*>/g, ''),
+                    size: Math.round(exportSettings.fontSize * 2),
                   }),
                 ],
+                spacing: {
+                  after: Math.round(exportSettings.lineHeight * 150),
+                  line: Math.round(exportSettings.lineHeight * 240)
+                }
               })
             );
           }
 
-          children.push(new Paragraph({ children: [] }));
+          children.push(new Paragraph({ 
+            children: [],
+            spacing: {
+              after: Math.round(exportSettings.lineHeight * 100)
+            }
+          }));
         });
       }
 
@@ -426,10 +465,14 @@ const App = () => {
               new TextRun({
                 text: 'Education',
                 bold: true,
-                size: 24,
+                size: Math.round(exportSettings.fontSize * 2.2),
               }),
             ],
             heading: HeadingLevel.HEADING_2,
+            spacing: {
+              before: Math.round(exportSettings.lineHeight * 200),
+              after: Math.round(exportSettings.lineHeight * 100)
+            }
           })
         );
 
@@ -440,19 +483,26 @@ const App = () => {
                 new TextRun({
                   text: edu.degree,
                   bold: true,
+                  size: Math.round(exportSettings.fontSize * 2),
                 }),
               ],
+              spacing: {
+                after: Math.round(exportSettings.lineHeight * 50)
+              }
             }),
             new Paragraph({
               children: [
                 new TextRun({
                   text: `${edu.institution} - ${edu.graduation_date}`,
                   italics: true,
+                  size: Math.round(exportSettings.fontSize * 1.8),
                 }),
               ],
+              spacing: {
+                after: Math.round(exportSettings.lineHeight * 100)
+              }
             })
           );
-          children.push(new Paragraph({ children: [] }));
         });
       }
 
@@ -466,38 +516,59 @@ const App = () => {
               new TextRun({
                 text: 'Skills',
                 bold: true,
-                size: 24,
+                size: Math.round(exportSettings.fontSize * 2.2),
               }),
             ],
             heading: HeadingLevel.HEADING_2,
+            spacing: {
+              before: Math.round(exportSettings.lineHeight * 200),
+              after: Math.round(exportSettings.lineHeight * 100)
+            }
           }),
           new Paragraph({
             children: [
               new TextRun({
                 text: skills.join(', '),
+                size: Math.round(exportSettings.fontSize * 2),
               }),
             ],
+            spacing: {
+              after: Math.round(exportSettings.lineHeight * 100),
+              line: Math.round(exportSettings.lineHeight * 240)
+            }
           })
         );
       }
 
       setExportProgress(95);
 
-      // Create document
+      // Create document with custom margins
       const doc = new Document({
         sections: [{
-          properties: {},
+          properties: {
+            page: {
+              margin: {
+                top: Math.round(exportSettings.marginTop * 56.7), // Convert mm to twips
+                bottom: Math.round(exportSettings.marginBottom * 56.7),
+                left: Math.round(exportSettings.marginLeft * 56.7),
+                right: Math.round(exportSettings.marginRight * 56.7),
+              },
+              size: {
+                orientation: exportSettings.orientation === 'landscape' ? 'landscape' : 'portrait',
+              }
+            }
+          },
           children: children,
         }],
       });
 
       // Generate and save
       const blob = await Packer.toBlob(doc);
-      const fileName = `${personal_info.full_name || 'Resume'}.docx`;
+      const fileName = `${personal_info.full_name || 'Resume'}_${exportSettings.pageSize}_${exportSettings.orientation}.docx`;
       saveAs(blob, fileName);
       
       setExportProgress(100);
-      showNotification('DOC exported successfully!', 'success');
+      showNotification('DOC exported successfully with custom settings!', 'success');
     } catch (error) {
       console.error('Error generating DOC:', error);
       showNotification('Error generating DOC. Please try again.', 'error');
