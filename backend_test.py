@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class ResumeCreatorAPITester:
-    def __init__(self, base_url="https://49d41494-df0c-439a-8433-5631963ee8f8.preview.emergentagent.com"):
+    def __init__(self, base_url="https://988cdafa-cc4a-49bc-b180-ed552752ab68.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.token = None
