@@ -756,6 +756,294 @@ const App = () => {
     }));
   };
 
+  // Export Settings Component
+  const ExportSettings = () => (
+    <Dialog open={showExportSettings} onOpenChange={setShowExportSettings}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Export Settings
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          {/* Page Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Page Settings</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Page Size</Label>
+                <Select 
+                  value={exportSettings.pageSize} 
+                  onValueChange={(value) => setExportSettings(prev => ({ ...prev, pageSize: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="a4">A4 (210 × 297 mm)</SelectItem>
+                    <SelectItem value="letter">Letter (216 × 279 mm)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label>Orientation</Label>
+                <Select 
+                  value={exportSettings.orientation} 
+                  onValueChange={(value) => setExportSettings(prev => ({ ...prev, orientation: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="portrait">Portrait</SelectItem>
+                    <SelectItem value="landscape">Landscape</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Margin Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Margins (mm)</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Top Margin</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={exportSettings.marginTop}
+                    onChange={(e) => setExportSettings(prev => ({ 
+                      ...prev, 
+                      marginTop: Math.max(0, Math.min(50, parseInt(e.target.value) || 0))
+                    }))}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">mm</span>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Bottom Margin</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={exportSettings.marginBottom}
+                    onChange={(e) => setExportSettings(prev => ({ 
+                      ...prev, 
+                      marginBottom: Math.max(0, Math.min(50, parseInt(e.target.value) || 0))
+                    }))}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">mm</span>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Left Margin</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={exportSettings.marginLeft}
+                    onChange={(e) => setExportSettings(prev => ({ 
+                      ...prev, 
+                      marginLeft: Math.max(0, Math.min(50, parseInt(e.target.value) || 0))
+                    }))}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">mm</span>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Right Margin</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="50"
+                    value={exportSettings.marginRight}
+                    onChange={(e) => setExportSettings(prev => ({ 
+                      ...prev, 
+                      marginRight: Math.max(0, Math.min(50, parseInt(e.target.value) || 0))
+                    }))}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">mm</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setExportSettings(prev => ({ 
+                  ...prev, 
+                  marginTop: 20, marginBottom: 20, marginLeft: 15, marginRight: 15
+                }))}
+              >
+                Standard Margins
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setExportSettings(prev => ({ 
+                  ...prev, 
+                  marginTop: 25, marginBottom: 25, marginLeft: 25, marginRight: 25
+                }))}
+              >
+                Wide Margins
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => setExportSettings(prev => ({ 
+                  ...prev, 
+                  marginTop: 10, marginBottom: 10, marginLeft: 10, marginRight: 10
+                }))}
+              >
+                Narrow Margins
+              </Button>
+            </div>
+          </div>
+
+          {/* Typography Settings */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Typography (DOC Export Only)</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label>Font Size</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="8"
+                    max="18"
+                    value={exportSettings.fontSize}
+                    onChange={(e) => setExportSettings(prev => ({ 
+                      ...prev, 
+                      fontSize: Math.max(8, Math.min(18, parseInt(e.target.value) || 12))
+                    }))}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">pt</span>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Line Height</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    type="number"
+                    min="1.0"
+                    max="3.0"
+                    step="0.1"
+                    value={exportSettings.lineHeight}
+                    onChange={(e) => setExportSettings(prev => ({ 
+                      ...prev, 
+                      lineHeight: Math.max(1.0, Math.min(3.0, parseFloat(e.target.value) || 1.5))
+                    }))}
+                    className="w-20"
+                  />
+                  <span className="text-sm text-gray-500">x</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Options */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold border-b pb-2">Additional Options</h3>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Camera className="w-4 h-4" />
+                  Include Profile Photo
+                </Label>
+                <Switch
+                  checked={exportSettings.includePhoto}
+                  onCheckedChange={(checked) => setExportSettings(prev => ({ 
+                    ...prev, 
+                    includePhoto: checked 
+                  }))}
+                />
+              </div>
+              
+              <div>
+                <Label>Color Mode (PDF Only)</Label>
+                <Select 
+                  value={exportSettings.colorMode} 
+                  onValueChange={(value) => setExportSettings(prev => ({ ...prev, colorMode: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="color">Full Color</SelectItem>
+                    <SelectItem value="bw">Black & White</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Preview Settings */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h4 className="font-medium mb-2">Preview Settings:</h4>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>Page: {exportSettings.pageSize.toUpperCase()} {exportSettings.orientation}</div>
+              <div>Margins: {exportSettings.marginTop}mm top, {exportSettings.marginBottom}mm bottom, {exportSettings.marginLeft}mm left, {exportSettings.marginRight}mm right</div>
+              <div>Font: {exportSettings.fontSize}pt, Line Height: {exportSettings.lineHeight}x</div>
+              <div>Photo: {exportSettings.includePhoto ? 'Included' : 'Excluded'}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-between pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => setExportSettings({
+              marginTop: 20,
+              marginBottom: 20,
+              marginLeft: 15,
+              marginRight: 15,
+              pageSize: 'a4',
+              orientation: 'portrait',
+              fontSize: 12,
+              lineHeight: 1.5,
+              includePhoto: true,
+              colorMode: 'color'
+            })}
+          >
+            Reset to Defaults
+          </Button>
+          
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowExportSettings(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setShowExportSettings(false)}>
+              Apply Settings
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   const ResumePreview = () => {
     const getTemplateStyles = () => {
       switch (selectedTemplate) {
