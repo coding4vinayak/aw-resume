@@ -1374,6 +1374,14 @@ const App = () => {
                 Edit
               </Button>
               <Button 
+                onClick={() => setShowExportSettings(true)} 
+                variant="outline"
+                className="border-purple-200 hover:bg-purple-50"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Export Settings
+              </Button>
+              <Button 
                 onClick={exportToPDF} 
                 className="bg-red-600 hover:bg-red-700"
                 disabled={isExporting}
