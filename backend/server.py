@@ -248,7 +248,7 @@ async def get_resume_templates():
     ]
     return templates
 
-@api_router.post("/resumes", response_model=ResumeData)
+@api_router.post("/resumes", response_model=ResumeData, status_code=201)
 async def create_resume(resume_data: ResumeCreate):
     resume = ResumeData(**resume_data.dict())
     await db.resumes.insert_one(resume.dict())
