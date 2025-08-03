@@ -1100,7 +1100,7 @@ const App = () => {
                   New Resume
                 </Button>
                 <div className="max-h-48 overflow-y-auto custom-scrollbar">
-                  {resumes.map((resume) => (
+                  {resumes && resumes.length > 0 ? resumes.map((resume) => (
                     <div key={resume.id} className="flex items-center justify-between p-2 hover:bg-blue-50 rounded transition-colors">
                       <button
                         onClick={() => loadResume(resume.id)}
@@ -1117,7 +1117,9 @@ const App = () => {
                         <Trash2 className="w-3 h-3" />
                       </Button>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-sm text-gray-500 text-center py-4">No resumes yet</div>
+                  )}
                 </div>
               </CardContent>
             </Card>
