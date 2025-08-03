@@ -1414,6 +1414,7 @@ const App = () => {
             <ResumePreview />
           </div>
         </div>
+        <ExportSettings />
       </div>
     );
   }
